@@ -4,12 +4,12 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - task2/ansible/**
+      - ansible/**
       - .github/workflows/ansible-k8s-cicd.yml
   push:
     branches: [ main ]
     paths:
-      - task2/ansible/**
+      - ansible/**
       - .github/workflows/ansible-k8s-cicd.yml
 
 permissions:
@@ -36,45 +36,53 @@ jobs:
 
       - name: Prepare SSH key
         env:
-   
-          SSH_PRIVATE_KEY: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}   
+          SSH_PRIVATE_KEY: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
         run: |
-          if [ -z "$ANSIBLE_SSH_PRIVATE_KEY" ]; then
-            echo "::error::Missing secret: SSH_PRIVATE_KEY"
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "::error::Missing required secret: ANSIBLE_SSH_PRIVATE_KEY"
             exit 1
           fi
           install -m 700 -d ~/.ssh
-          printf "%s\n" "$ANSIBLE_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ansible_key"
+          printf "%s\n" "$SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ansible_key"
           chmod 600 "$RUNNER_TEMP/ansible_key"
 
       - name: Validate static inventory
         run: |
-          if [ ! -f task2/ansible/inventory/hosts.ini ]; then
-            echo "::error::Missing task2/ansible/inventory/hosts.ini"
+          if [ ! -f ansible/inventory/hosts.ini ]; then
+            echo "::error::Missing ansible/inventory/hosts.ini"
             exit 1
           fi
-          awk 'NF && $1 !~ /^\[/' task2/ansible/inventory/hosts.ini | while read -r host _; do
+          if ! grep -Eq '^[^#[:space:]].*ansible_user=' ansible/inventory/hosts.ini; then
+            echo "::error::Inventory has no configured hosts with ansible_user"
+            exit 1
+          fi
+
+          awk 'NF && $1 !~ /^\[/' ansible/inventory/hosts.ini | while read -r host _; do
             ssh-keyscan -H "$host" >> ~/.ssh/known_hosts 2>/dev/null || true
           done
 
       - name: Ansible syntax check
-        working-directory: task2/ansible
+        working-directory: ansible
         env:
-          ANSIBLE_CONFIG: ${{ github.workspace }}/task2/ansible/ansible.cfg
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
         run: |
           ansible-playbook playbooks/install-k8s-stack.yml --syntax-check
 
       - name: Ansible dry-run check mode
-        working-directory: task2/ansible
+        working-directory: ansible
         env:
-          ANSIBLE_CONFIG: ${{ github.workspace }}/task2/ansible/ansible.cfg
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
         run: |
+          MINIKUBE_PROFILE_VAL="minikube"
+          PROXY_BIND_VAL="0.0.0.0"
+          PROXY_PORT_VAL="8001"
+
           ansible-playbook playbooks/install-k8s-stack.yml \
             --check --diff \
             --private-key "$RUNNER_TEMP/ansible_key" \
-            --extra-vars "minikube_profile=minikube" \
-            --extra-vars "proxy_bind_address=0.0.0.0" \
-            --extra-vars "proxy_port=8001"
+            --extra-vars "minikube_profile=${MINIKUBE_PROFILE_VAL}" \
+            --extra-vars "proxy_bind_address=${PROXY_BIND_VAL}" \
+            --extra-vars "proxy_port=${PROXY_PORT_VAL}"
 
   apply:
     name: Apply Installation
@@ -98,20 +106,42 @@ jobs:
 
       - name: Prepare SSH key
         env:
-          # Тут теж змінено на ТВОЮ назву
           SSH_PRIVATE_KEY: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
         run: |
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "::error::Missing required secret: ANSIBLE_SSH_PRIVATE_KEY"
+            exit 1
+          fi
           install -m 700 -d ~/.ssh
-          printf "%s\n" "$ANSIBLE_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ansible_key"
+          printf "%s\n" "$SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ansible_key"
           chmod 600 "$RUNNER_TEMP/ansible_key"
 
-      - name: Install Kubernetes stack
-        working-directory: task2/ansible
-        env:
-          ANSIBLE_CONFIG: ${{ github.workspace }}/task2/ansible/ansible.cfg
+      - name: Validate static inventory
         run: |
+          if [ ! -f ansible/inventory/hosts.ini ]; then
+            echo "::error::Missing ansible/inventory/hosts.ini"
+            exit 1
+          fi
+          if ! grep -Eq '^[^#[:space:]].*ansible_user=' ansible/inventory/hosts.ini; then
+            echo "::error::Inventory has no configured hosts with ansible_user"
+            exit 1
+          fi
+
+          awk 'NF && $1 !~ /^\[/' ansible/inventory/hosts.ini | while read -r host _; do
+            ssh-keyscan -H "$host" >> ~/.ssh/known_hosts 2>/dev/null || true
+          done
+
+      - name: Install Kubernetes stack
+        working-directory: ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+        run: |
+          MINIKUBE_PROFILE_VAL="minikube"
+          PROXY_BIND_VAL="0.0.0.0"
+          PROXY_PORT_VAL="8001"
+
           ansible-playbook playbooks/install-k8s-stack.yml \
             --private-key "$RUNNER_TEMP/ansible_key" \
-            --extra-vars "minikube_profile=minikube" \
-            --extra-vars "proxy_bind_address=0.0.0.0" \
-            --extra-vars "proxy_port=8001"
+            --extra-vars "minikube_profile=${MINIKUBE_PROFILE_VAL}" \
+            --extra-vars "proxy_bind_address=${PROXY_BIND_VAL}" \
+            --extra-vars "proxy_port=${PROXY_PORT_VAL}"
