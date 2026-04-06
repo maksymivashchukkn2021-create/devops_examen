@@ -22,33 +22,3 @@ output "bucket_name" {
   description = "S3 bucket name"
   value       = module.storage.bucket_name
 }
-
-output "ecr_repository_name" {
-  description = "ECR repository name"
-  value       = module.ecr.repository_name
-}
-
-output "ecr_repository_url" {
-  description = "ECR repository URL"
-  value       = module.ecr.repository_url
-}
-
-output "ecr_repository_arn" {
-  description = "ECR repository ARN"
-  value       = module.ecr.repository_arn
-}
-
-output "eks_cluster_name" {
-  description = "EKS cluster name"
-  value       = module.kubernetes.eks_cluster_name
-}
-
-output "eks_cluster_endpoint" {
-  description = "EKS API endpoint"
-  value       = module.kubernetes.eks_cluster_endpoint
-}
-
-output "eks_node_group_name" {
-  description = "EKS managed node group name"
-  value       = module.kubernetes.eks_node_group_name
-}
