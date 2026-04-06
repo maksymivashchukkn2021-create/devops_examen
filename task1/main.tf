@@ -21,6 +21,7 @@ module "storage" {
   bucket_name = var.bucket_name
 }
 
+/*
 module "ecr" {
   source = "./modules/ecr"
 
@@ -39,3 +40,4 @@ module "kubernetes" {
   eks_min_capacity       = var.eks_min_capacity
   eks_max_capacity       = var.eks_max_capacity
 }
+*/
