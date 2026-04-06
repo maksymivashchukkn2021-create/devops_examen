@@ -9,8 +9,8 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "ivashchuk-bucket"           
+    bucket = "ivashchuk-bucket"
     key    = "terraform/ivashchuk.tfstate"
-    region = "eu-north-1"                 
+    region = "eu-north-1"
   }
 }

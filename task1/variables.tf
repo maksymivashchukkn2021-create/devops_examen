@@ -1,25 +1,25 @@
 variable "region" {
   description = "aws region closest to ukraine"
   type        = string
-  default     = "eu-north-1" # Змінили на Стокгольм, де твій бакет
+  default     = "eu-north-1" 
 }
 
 variable "vpc_cidr" {
   description = "cidr block for vpc"
   type        = string
-  default     = "10.10.10.0/24" 
+  default     = "10.10.10.0/24"
 }
 
 variable "public_subnet_cidr" {
   description = "cidr block for public subnet"
   type        = string
-  default     = "10.10.10.0/25" 
+  default     = "10.10.10.0/25"
 }
 
 variable "public_subnet_cidr_2" {
   description = "cidr block for second public subnet"
   type        = string
-  default     = "10.10.10.128/25" 
+  default     = "10.10.10.128/25"
 }
 
 variable "instance_type" {
@@ -31,13 +31,13 @@ variable "instance_type" {
 variable "bucket_name" {
   description = "s3 bucket name"
   type        = string
-  default     = "ivashchuk-bucket" 
+  default     = "ivashchuk-bucket"
 }
 
 variable "ecr_repository_name" {
   description = "ECR repository name for application images"
   type        = string
-  default     = "ivashchuk-repo" 
+  default     = "ivashchuk-repo"
 }
 
 variable "ecr_image_tag_mutability" {
@@ -49,7 +49,7 @@ variable "ecr_image_tag_mutability" {
 variable "cluster_name" {
   description = "EKS cluster name"
   type        = string
-  default     = "ivashchuk-eks-cluster" 
+  default     = "ivashchuk-eks-cluster"
 }
 
 variable "kubernetes_version" {
@@ -61,7 +61,7 @@ variable "kubernetes_version" {
 variable "eks_node_instance_type" {
   description = "instance type for EKS worker nodes"
   type        = string
-  default     = "t3.medium" 
+  default     = "t3.medium"
 }
 
 variable "eks_desired_capacity" {
