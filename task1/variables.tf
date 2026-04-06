@@ -1,7 +1,7 @@
 variable "region" {
   description = "aws region closest to ukraine"
   type        = string
-  default     = "eu-north-1" 
+  default     = "eu-north-1"
 }
 
 variable "vpc_cidr" {
