@@ -25,7 +25,7 @@ variable "public_subnet_cidr_2" {
 variable "instance_type" {
   description = "ec2 instance type suitable for minikube/kubernetes"
   type        = string
-  default     = "t3.medium" # Змінив на medium, бо для Minikube треба мінімум 2 CPU та 4GB RAM 
+  default     = "t3.micro"
 }
 
 variable "bucket_name" {
