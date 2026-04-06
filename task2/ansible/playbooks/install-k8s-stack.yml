@@ -1,0 +1,123 @@
+---
+- name: "Install Kubernetes stack - Student Ivashchuk" 
+  hosts: k8s_nodes
+  become: true
+  gather_facts: true
+
+  vars:
+    kubectl_version: "v1.30.2"
+    minikube_version: "v1.33.1"
+    helm_version: "v3.16.2"
+    minikube_profile: "minikube"
+    minikube_run_user: "ubuntu"
+    proxy_bind_address: "0.0.0.0"
+    proxy_port: 8001
+    docker_arch_map:
+      x86_64: amd64
+      aarch64: arm64
+
+  pre_tasks:
+    - name: ensure OS is Ubuntu 24+
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - (ansible_distribution_major_version | int) >= 24
+        fail_msg: "this playbook supports Ubuntu 24+ only"
+
+    - name: ensure apt keyrings directory exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+  tasks:
+    
+    - name: install required base packages
+      ansible.builtin.apt:
+        name: [apt-transport-https, ca-certificates, curl, gnupg, conntrack, socat]
+        state: present
+        update_cache: true
+
+    - name: add Docker apt repository key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: configure Docker apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ docker_arch_map.get(ansible_architecture, 'amd64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        filename: docker
+        state: present
+
+    - name: install Docker engine packages
+      ansible.builtin.apt:
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+        state: present
+        update_cache: true
+
+    - name: install kubectl binary
+      ansible.builtin.get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: "0755"
+
+    - name: download Minikube binary
+      ansible.builtin.get_url:
+        url: "https://storage.googleapis.com/minikube/releases/{{ minikube_version }}/minikube-linux-amd64"
+        dest: /usr/local/bin/minikube
+        mode: "0755"
+
+    - name: download and extract Helm
+      block:
+        - name: download Helm archive
+          ansible.builtin.get_url:
+            url: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
+            dest: /tmp/helm.tar.gz
+        - name: extract Helm archive
+          ansible.builtin.unarchive:
+            src: /tmp/helm.tar.gz
+            dest: /tmp
+            remote_src: true
+        - name: install Helm binary
+          ansible.builtin.copy:
+            src: /tmp/linux-amd64/helm
+            dest: /usr/local/bin/helm
+            mode: "0755"
+            remote_src: true
+
+    - name: ensure user exists in docker group
+      ansible.builtin.user:
+        name: "{{ minikube_run_user }}"
+        groups: docker
+        append: true
+
+    - name: start minikube
+      ansible.builtin.shell: "sg docker -c 'minikube status -p {{ minikube_profile }} || minikube start -p {{ minikube_profile }} --driver=docker'"
+      become_user: "{{ minikube_run_user }}"
+
+    - name: install minikube proxy systemd unit
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/minikube-proxy.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Minikube kubectl proxy (Ivashchuk)
+          After=network.target docker.service
+
+          [Service]
+          Type=simple
+          User={{ minikube_run_user }}
+          ExecStart=/usr/local/bin/minikube -p {{ minikube_profile }} kubectl -- proxy --address={{ proxy_bind_address }} --accept-hosts=.* --port={{ proxy_port }}
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: restart minikube proxy
+
+  handlers:
+    - name: restart minikube proxy
+      ansible.builtin.systemd:
+        name: minikube-proxy.service
+        daemon_reload: true
+        state: restarted

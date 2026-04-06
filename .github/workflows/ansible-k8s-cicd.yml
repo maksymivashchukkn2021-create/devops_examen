@@ -1,0 +1,117 @@
+name: Ansible Kubernetes Stack CI/CD
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - task2/ansible/**
+      - .github/workflows/ansible-k8s-cicd.yml
+  push:
+    branches: [ main ]
+    paths:
+      - task2/ansible/**
+      - .github/workflows/ansible-k8s-cicd.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate and Dry-Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core==2.17.6
+
+      - name: Prepare SSH key
+        env:
+          # Змінено на ТВОЮ назву секрету
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }} 
+        run: |
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "::error::Missing secret: SSH_PRIVATE_KEY"
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf "%s\n" "$SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ansible_key"
+          chmod 600 "$RUNNER_TEMP/ansible_key"
+
+      - name: Validate static inventory
+        run: |
+          if [ ! -f task2/ansible/inventory/hosts.ini ]; then
+            echo "::error::Missing task2/ansible/inventory/hosts.ini"
+            exit 1
+          fi
+          awk 'NF && $1 !~ /^\[/' task2/ansible/inventory/hosts.ini | while read -r host _; do
+            ssh-keyscan -H "$host" >> ~/.ssh/known_hosts 2>/dev/null || true
+          done
+
+      - name: Ansible syntax check
+        working-directory: task2/ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/task2/ansible/ansible.cfg
+        run: |
+          ansible-playbook playbooks/install-k8s-stack.yml --syntax-check
+
+      - name: Ansible dry-run check mode
+        working-directory: task2/ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/task2/ansible/ansible.cfg
+        run: |
+          ansible-playbook playbooks/install-k8s-stack.yml \
+            --check --diff \
+            --private-key "$RUNNER_TEMP/ansible_key" \
+            --extra-vars "minikube_profile=minikube" \
+            --extra-vars "proxy_bind_address=0.0.0.0" \
+            --extra-vars "proxy_port=8001"
+
+  apply:
+    name: Apply Installation
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core==2.17.6
+
+      - name: Prepare SSH key
+        env:
+          # Тут теж змінено на ТВОЮ назву
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf "%s\n" "$SSH_PRIVATE_KEY" > "$RUNNER_TEMP/ansible_key"
+          chmod 600 "$RUNNER_TEMP/ansible_key"
+
+      - name: Install Kubernetes stack
+        working-directory: task2/ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/task2/ansible/ansible.cfg
+        run: |
+          ansible-playbook playbooks/install-k8s-stack.yml \
+            --private-key "$RUNNER_TEMP/ansible_key" \
+            --extra-vars "minikube_profile=minikube" \
+            --extra-vars "proxy_bind_address=0.0.0.0" \
+            --extra-vars "proxy_port=8001"
