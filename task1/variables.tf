@@ -34,7 +34,7 @@ variable "bucket_name" {
   default     = "ivashchuk-bucket"
 }
 
-/*
+
 variable "ecr_repository_name" {
   description = "ECR repository name for application images"
   type        = string
@@ -46,14 +46,14 @@ variable "ecr_image_tag_mutability" {
   type        = string
   default     = "MUTABLE"
 }
-*/
+
 
 variable "cluster_name" {
   description = "EKS cluster name"
   type        = string
   default     = "ivashchuk-eks-cluster"
 }
-/*
+
 variable "kubernetes_version" {
   description = "kubernetes version for EKS"
   type        = string
@@ -83,4 +83,3 @@ variable "eks_max_capacity" {
   type        = number
   default     = 3
 }
-*/
