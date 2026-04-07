@@ -1,3 +1,4 @@
+# Task1: кореневий файл, який зв'язує модулі network, compute, storage і kubernetes.
 module "network" {
   source = "./modules/network"
 
@@ -20,4 +21,16 @@ module "storage" {
   source = "./modules/storage"
 
   bucket_name = var.bucket_name
+}
+
+module "kubernetes" {
+  source = "./modules/kubernetes"
+
+  cluster_name           = var.cluster_name
+  kubernetes_version     = var.kubernetes_version
+  subnet_ids             = module.network.public_subnet_ids
+  eks_node_instance_type = var.eks_node_instance_type
+  eks_desired_capacity   = var.eks_desired_capacity
+  eks_min_capacity       = var.eks_min_capacity
+  eks_max_capacity       = var.eks_max_capacity
 }

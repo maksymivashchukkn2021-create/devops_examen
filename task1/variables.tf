@@ -1,3 +1,4 @@
+# Task1: оголошує вхідні змінні верхнього рівня для всіх інфраструктурних модулів.
 variable "region" {
   description = "aws region closest to ukraine"
   type        = string

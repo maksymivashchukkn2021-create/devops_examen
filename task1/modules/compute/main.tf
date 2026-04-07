@@ -1,3 +1,4 @@
+# Task1/compute: створює EC2 вузол, який використовується як обчислювальний хост.
 data "aws_ssm_parameter" "ubuntu_24_ami" {
   name = "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id"
 }
