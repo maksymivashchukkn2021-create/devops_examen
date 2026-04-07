@@ -123,23 +123,42 @@ jobs:
       - name: Resolve target EKS cluster
         id: eks-cluster
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "name=${{ inputs.eks_cluster_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "name=${{ env.DEFAULT_EKS_CLUSTER }}" >> "$GITHUB_OUTPUT"
+          if [ -z "$AWS_REGION" ]; then
+            echo "::error::AWS_REGION is empty. Set repository variable AWS_REGION or secret AWS_REGION"
+            exit 1
           fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            REQUESTED_CLUSTER="${{ inputs.eks_cluster_name }}"
+          else
+            REQUESTED_CLUSTER="${{ env.DEFAULT_EKS_CLUSTER }}"
+          fi
+
+          STATUS=$(aws eks describe-cluster --name "$REQUESTED_CLUSTER" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
+          if [ "$STATUS" = "ACTIVE" ]; then
+            echo "name=$REQUESTED_CLUSTER" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          RESOLVED_CLUSTER=""
+          for CLUSTER in $(aws eks list-clusters --region "$AWS_REGION" --query 'clusters[]' --output text 2>/dev/null || true); do
+            CANDIDATE_STATUS=$(aws eks describe-cluster --name "$CLUSTER" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
+            if [ "$CANDIDATE_STATUS" = "ACTIVE" ]; then
+              RESOLVED_CLUSTER="$CLUSTER"
+              break
+            fi
+          done
+
+          if [ -z "$RESOLVED_CLUSTER" ] || [ "$RESOLVED_CLUSTER" = "None" ]; then
+            echo "::error::Requested EKS cluster '$REQUESTED_CLUSTER' not found/active in region '$AWS_REGION', and no fallback ACTIVE cluster was discovered"
+            exit 1
+          fi
+
+          echo "::warning::Requested EKS cluster '$REQUESTED_CLUSTER' unavailable. Falling back to ACTIVE cluster '$RESOLVED_CLUSTER'"
+          echo "name=$RESOLVED_CLUSTER" >> "$GITHUB_OUTPUT"
 
       - name: Update kubeconfig
         run: |
-          STATUS=$(aws eks describe-cluster --name "${{ steps.eks-cluster.outputs.name }}" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
-          if [ -z "$STATUS" ]; then
-            echo "::error::EKS cluster '${{ steps.eks-cluster.outputs.name }}' was not found in region '$AWS_REGION'"
-            exit 1
-          fi
-          if [ "$STATUS" != "ACTIVE" ]; then
-            echo "::error::EKS cluster '${{ steps.eks-cluster.outputs.name }}' is in status '$STATUS' (expected ACTIVE)"
-            exit 1
-          fi
           aws eks update-kubeconfig --name "${{ steps.eks-cluster.outputs.name }}" --region "$AWS_REGION"
 
       - name: Deploy to dev namespace (port 8002)
@@ -231,23 +250,42 @@ jobs:
       - name: Resolve target EKS cluster
         id: eks-cluster
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "name=${{ inputs.eks_cluster_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "name=${{ env.DEFAULT_EKS_CLUSTER }}" >> "$GITHUB_OUTPUT"
+          if [ -z "$AWS_REGION" ]; then
+            echo "::error::AWS_REGION is empty. Set repository variable AWS_REGION or secret AWS_REGION"
+            exit 1
           fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            REQUESTED_CLUSTER="${{ inputs.eks_cluster_name }}"
+          else
+            REQUESTED_CLUSTER="${{ env.DEFAULT_EKS_CLUSTER }}"
+          fi
+
+          STATUS=$(aws eks describe-cluster --name "$REQUESTED_CLUSTER" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
+          if [ "$STATUS" = "ACTIVE" ]; then
+            echo "name=$REQUESTED_CLUSTER" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          RESOLVED_CLUSTER=""
+          for CLUSTER in $(aws eks list-clusters --region "$AWS_REGION" --query 'clusters[]' --output text 2>/dev/null || true); do
+            CANDIDATE_STATUS=$(aws eks describe-cluster --name "$CLUSTER" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
+            if [ "$CANDIDATE_STATUS" = "ACTIVE" ]; then
+              RESOLVED_CLUSTER="$CLUSTER"
+              break
+            fi
+          done
+
+          if [ -z "$RESOLVED_CLUSTER" ] || [ "$RESOLVED_CLUSTER" = "None" ]; then
+            echo "::error::Requested EKS cluster '$REQUESTED_CLUSTER' not found/active in region '$AWS_REGION', and no fallback ACTIVE cluster was discovered"
+            exit 1
+          fi
+
+          echo "::warning::Requested EKS cluster '$REQUESTED_CLUSTER' unavailable. Falling back to ACTIVE cluster '$RESOLVED_CLUSTER'"
+          echo "name=$RESOLVED_CLUSTER" >> "$GITHUB_OUTPUT"
 
       - name: Update kubeconfig
         run: |
-          STATUS=$(aws eks describe-cluster --name "${{ steps.eks-cluster.outputs.name }}" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
-          if [ -z "$STATUS" ]; then
-            echo "::error::EKS cluster '${{ steps.eks-cluster.outputs.name }}' was not found in region '$AWS_REGION'"
-            exit 1
-          fi
-          if [ "$STATUS" != "ACTIVE" ]; then
-            echo "::error::EKS cluster '${{ steps.eks-cluster.outputs.name }}' is in status '$STATUS' (expected ACTIVE)"
-            exit 1
-          fi
           aws eks update-kubeconfig --name "${{ steps.eks-cluster.outputs.name }}" --region "$AWS_REGION"
 
       - name: Deploy to release namespace (port 8003)
@@ -291,16 +329,27 @@ jobs:
 
       - name: Update kubeconfig
         run: |
-          STATUS=$(aws eks describe-cluster --name "${{ inputs.eks_cluster_name }}" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
-          if [ -z "$STATUS" ]; then
-            echo "::error::EKS cluster '${{ inputs.eks_cluster_name }}' was not found in region '$AWS_REGION'"
-            exit 1
-          fi
+          REQUESTED_CLUSTER="${{ inputs.eks_cluster_name }}"
+          STATUS=$(aws eks describe-cluster --name "$REQUESTED_CLUSTER" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
           if [ "$STATUS" != "ACTIVE" ]; then
-            echo "::error::EKS cluster '${{ inputs.eks_cluster_name }}' is in status '$STATUS' (expected ACTIVE)"
-            exit 1
+            RESOLVED_CLUSTER=""
+            for CLUSTER in $(aws eks list-clusters --region "$AWS_REGION" --query 'clusters[]' --output text 2>/dev/null || true); do
+              CANDIDATE_STATUS=$(aws eks describe-cluster --name "$CLUSTER" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
+              if [ "$CANDIDATE_STATUS" = "ACTIVE" ]; then
+                RESOLVED_CLUSTER="$CLUSTER"
+                break
+              fi
+            done
+
+            if [ -z "$RESOLVED_CLUSTER" ] || [ "$RESOLVED_CLUSTER" = "None" ]; then
+              echo "::error::Rollback cluster '$REQUESTED_CLUSTER' not found/active and no fallback ACTIVE cluster discovered in region '$AWS_REGION'"
+              exit 1
+            fi
+
+            echo "::warning::Rollback requested for '$REQUESTED_CLUSTER', using ACTIVE fallback cluster '$RESOLVED_CLUSTER'"
+            REQUESTED_CLUSTER="$RESOLVED_CLUSTER"
           fi
-          aws eks update-kubeconfig --name "${{ inputs.eks_cluster_name }}" --region "$AWS_REGION"
+          aws eks update-kubeconfig --name "$REQUESTED_CLUSTER" --region "$AWS_REGION"
 
       - name: Rollback selected environment
         run: |
