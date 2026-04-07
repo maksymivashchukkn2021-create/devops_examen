@@ -1,3 +1,4 @@
+# Task1/kubernetes: створює IAM ролі, EKS control plane та керовану групу нод.
 data "aws_iam_policy_document" "eks_cluster_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]

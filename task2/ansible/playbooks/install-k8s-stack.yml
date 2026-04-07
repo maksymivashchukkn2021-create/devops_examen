@@ -1,3 +1,4 @@
+# Task2: встановлює і налаштовує kubectl, minikube, helm та proxy-сервіс на VM.
 ---
 - name: "Install Kubernetes stack - Student Ivashchuk" #test
   hosts: k8s_nodes

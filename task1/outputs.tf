@@ -1,3 +1,4 @@
+# Task1: публікує ключові outputs інфраструктури для CI/CD та інтеграції між тасками.
 output "vpc_id" {
   description = "VPC ID"
   value       = module.network.vpc_id
@@ -21,4 +22,19 @@ output "security_group_id" {
 output "bucket_name" {
   description = "S3 bucket name"
   value       = module.storage.bucket_name
+}
+
+output "eks_cluster_name" {
+  description = "EKS cluster name"
+  value       = module.kubernetes.eks_cluster_name
+}
+
+output "eks_cluster_endpoint" {
+  description = "EKS API endpoint"
+  value       = module.kubernetes.eks_cluster_endpoint
+}
+
+output "eks_node_group_name" {
+  description = "EKS managed node group name"
+  value       = module.kubernetes.eks_node_group_name
 }

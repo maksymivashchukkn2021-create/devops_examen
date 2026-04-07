@@ -1,0 +1,36 @@
+# Task3 Helm template: рендерить Kubernetes Deployment для pod-ів Django застосунку.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "django-hello-world.fullname" . }}
+  labels:
+    {{- include "django-hello-world.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "django-hello-world.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "django-hello-world.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret | quote }}
+      {{- end }}
+      serviceAccountName: {{ include "django-hello-world.serviceAccountName" . }}
+      containers:
+        - name: django-container
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: DEBUG
+              value: {{ .Values.django.debug | quote }}
+            - name: ALLOWED_HOSTS
+              value: {{ .Values.django.allowedHosts | quote }}
+

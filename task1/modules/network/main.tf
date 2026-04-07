@@ -1,3 +1,4 @@
+# Task1/network: створює VPC, публічні підмережі, маршрутизацію та правила security group.
 data "aws_availability_zones" "available" {
   state = "available"
 }

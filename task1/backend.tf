@@ -1,3 +1,4 @@
+# Task1: задає версію Terraform, обмеження провайдера і віддалений S3 backend для state.
 terraform {
   required_version = ">= 1.6.0"
 
