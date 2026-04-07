@@ -1,5 +1,5 @@
 ---
-- name: "Install Kubernetes stack - Student Ivashchuk" 
+- name: "Install Kubernetes stack - Student Ivashchuk" #test
   hosts: k8s_nodes
   become: true
   gather_facts: true
