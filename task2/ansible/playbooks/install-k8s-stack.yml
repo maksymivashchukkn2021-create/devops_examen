@@ -39,20 +39,21 @@
         name: [apt-transport-https, ca-certificates, curl, gnupg, conntrack, socat]
         state: present
         update_cache: true
+      when: not ansible_check_mode
 
     - name: add Docker apt repository key
       ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
         dest: /etc/apt/keyrings/docker.asc
         mode: "0644"
-      when: minikube_driver == "docker"
+      when: not ansible_check_mode and minikube_driver == "docker"
 
     - name: configure Docker apt repository
       ansible.builtin.apt_repository:
         repo: "deb [arch={{ docker_arch_map.get(ansible_architecture, 'amd64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         filename: docker
         state: present
-      when: minikube_driver == "docker"
+      when: not ansible_check_mode and minikube_driver == "docker"
 
     - name: install Docker engine packages from Docker repo
       block:
@@ -74,14 +75,14 @@
               ansible.builtin.shell: "curl -fsSL https://get.docker.com | sh"
               args:
                 creates: /usr/bin/docker
-      when: minikube_driver == "docker"
+      when: not ansible_check_mode and minikube_driver == "docker"
 
     - name: install containerd for none driver
       ansible.builtin.apt:
         name: [containerd]
         state: present
         update_cache: true
-      when: minikube_driver == "none"
+      when: not ansible_check_mode and minikube_driver == "none"
 
     - name: ensure containerd is enabled and running
       ansible.builtin.systemd:
@@ -97,12 +98,14 @@
         url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
         dest: /usr/local/bin/kubectl
         mode: "0755"
+      when: not ansible_check_mode
 
     - name: download Minikube binary
       ansible.builtin.get_url:
         url: "https://storage.googleapis.com/minikube/releases/{{ minikube_version }}/minikube-linux-amd64"
         dest: /usr/local/bin/minikube
         mode: "0755"
+      when: not ansible_check_mode
 
     - name: download and extract Helm
       when: not ansible_check_mode
