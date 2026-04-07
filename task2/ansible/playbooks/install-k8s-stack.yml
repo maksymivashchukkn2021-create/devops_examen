@@ -58,11 +58,18 @@
             state: present
             update_cache: true
       rescue:
-        - name: fallback to Ubuntu docker.io package
-          ansible.builtin.apt:
-            name: [docker.io]
-            state: present
-            update_cache: true
+        - name: fallback Docker installation
+          block:
+            - name: fallback to Ubuntu docker.io package
+              ansible.builtin.apt:
+                name: [docker.io]
+                state: present
+                update_cache: true
+          rescue:
+            - name: fallback to official Docker install script
+              ansible.builtin.shell: "curl -fsSL https://get.docker.com | sh"
+              args:
+                creates: /usr/bin/docker
 
     - name: install kubectl binary
       ansible.builtin.get_url:
