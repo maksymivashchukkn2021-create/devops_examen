@@ -138,7 +138,7 @@
           [Install]
           WantedBy=multi-user.target
       notify: restart minikube proxy
-          when: not ansible_check_mode
+      when: not ansible_check_mode
 
   handlers:
     - name: restart minikube proxy
