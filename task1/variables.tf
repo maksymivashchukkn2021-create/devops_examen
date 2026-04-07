@@ -28,6 +28,12 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "key_name" {
+  description = "existing EC2 key pair name for SSH access"
+  type        = string
+  default     = ""
+}
+
 variable "ecr_repository_name" {
   description = "ECR repository name for application images"
   type        = string
