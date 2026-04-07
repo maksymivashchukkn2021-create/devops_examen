@@ -28,6 +28,11 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "key_name" {
+  description = "existing EC2 key pair name for SSH access"
+  type        = string
+}
+
 variable "bucket_name" {
   description = "s3 bucket name"
   type        = string

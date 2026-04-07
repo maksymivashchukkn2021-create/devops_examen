@@ -11,6 +11,7 @@ module "compute" {
   source = "./modules/compute"
 
   instance_type     = var.instance_type
+  key_name          = var.key_name
   subnet_id         = module.network.public_subnet_id
   security_group_id = module.network.security_group_id
 }
