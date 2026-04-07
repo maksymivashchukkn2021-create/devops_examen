@@ -1,3 +1,4 @@
+# Task3 CI/CD: збирає image застосунку, пушить у ECR і виконує deploy або rollback через Helm.
 name: App CI/CD
 
 on:
