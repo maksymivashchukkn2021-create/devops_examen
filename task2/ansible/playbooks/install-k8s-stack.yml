@@ -106,16 +106,19 @@
       ansible.builtin.group:
         name: docker
         state: present
+      when: not ansible_check_mode
 
     - name: ensure user exists in docker group
       ansible.builtin.user:
         name: "{{ minikube_run_user }}"
         groups: docker
         append: true
+      when: not ansible_check_mode
 
     - name: start minikube
       ansible.builtin.shell: "sg docker -c 'minikube status -p {{ minikube_profile }} || minikube start -p {{ minikube_profile }} --driver=docker'"
       become_user: "{{ minikube_run_user }}"
+      when: not ansible_check_mode
 
     - name: install minikube proxy systemd unit
       ansible.builtin.copy:
@@ -135,6 +138,7 @@
           [Install]
           WantedBy=multi-user.target
       notify: restart minikube proxy
+          when: not ansible_check_mode
 
   handlers:
     - name: restart minikube proxy
