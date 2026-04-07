@@ -4,12 +4,11 @@ image:
   tag: "develop"
 
 service:
+  type: LoadBalancer
   port: 8002
-
-appConfig:
-  debug: "True"
+  targetPort: 8000
+  annotations: {}
 
 django:
   debug: "True"
   allowedHosts: "*"
-

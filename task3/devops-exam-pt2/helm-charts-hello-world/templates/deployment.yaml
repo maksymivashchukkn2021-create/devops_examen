@@ -1,3 +1,4 @@
+# Task3 Helm template: рендерить Kubernetes Deployment для pod-ів Django застосунку.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

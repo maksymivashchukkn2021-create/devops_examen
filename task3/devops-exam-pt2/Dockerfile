@@ -1,3 +1,4 @@
+# Task3 app image: інструкції збірки контейнера для Django hello-world сервісу.
 # Use the official Python image from the Docker Hub
 FROM python:3.12-slim
 
