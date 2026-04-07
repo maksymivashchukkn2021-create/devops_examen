@@ -1,21 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Chart.Name }}
+  name: {{ include "django-hello-world.fullname" . }}
   labels:
-    app: {{ .Chart.Name }}
+    {{- include "django-hello-world.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Chart.Name }}
+      {{- include "django-hello-world.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ .Chart.Name }}
+        {{- include "django-hello-world.selectorLabels" . | nindent 8 }}
     spec:
-      imagePullSecrets:                                  # ADD THIS
-        - name: {{ .Values.image.pullSecret | quote }}   # ADD THIS
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret | quote }}
+      {{- end }}
+      serviceAccountName: {{ include "django-hello-world.serviceAccountName" . }}
       containers:
         - name: django-container
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

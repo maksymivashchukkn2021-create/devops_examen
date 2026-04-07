@@ -4,6 +4,9 @@ on:
   push:
     branches: [develop]
     tags: ["*"]
+    paths:
+      - task3/devops-exam-pt2/**
+      - .github/workflows/app-k8s-cicd.yml
   workflow_dispatch:
     inputs:
       action:
@@ -47,11 +50,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_REGION: ${{ vars.AWS_REGION || secrets.AWS_REGION }}
   APP_CONTEXT: task3/devops-exam-pt2
   HELM_CHART_PATH: task3/devops-exam-pt2/helm-charts-hello-world
-  DEFAULT_ECR_REPOSITORY: ivashchuk-repo
-  DEFAULT_EKS_CLUSTER: ivashchuk-eks-cluster
+  DEFAULT_ECR_REPOSITORY: ${{ vars.DEFAULT_ECR_REPOSITORY || 'ivashchuk-repo' }}
+  DEFAULT_EKS_CLUSTER: ${{ vars.DEFAULT_EKS_CLUSTER || 'ivashchuk-eks-cluster' }}
 
 jobs:
   deploy_dev:
@@ -128,6 +131,15 @@ jobs:
 
       - name: Update kubeconfig
         run: |
+          STATUS=$(aws eks describe-cluster --name "${{ steps.eks-cluster.outputs.name }}" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
+          if [ -z "$STATUS" ]; then
+            echo "::error::EKS cluster '${{ steps.eks-cluster.outputs.name }}' was not found in region '$AWS_REGION'"
+            exit 1
+          fi
+          if [ "$STATUS" != "ACTIVE" ]; then
+            echo "::error::EKS cluster '${{ steps.eks-cluster.outputs.name }}' is in status '$STATUS' (expected ACTIVE)"
+            exit 1
+          fi
           aws eks update-kubeconfig --name "${{ steps.eks-cluster.outputs.name }}" --region "$AWS_REGION"
 
       - name: Deploy to dev namespace (port 8002)
@@ -227,6 +239,15 @@ jobs:
 
       - name: Update kubeconfig
         run: |
+          STATUS=$(aws eks describe-cluster --name "${{ steps.eks-cluster.outputs.name }}" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
+          if [ -z "$STATUS" ]; then
+            echo "::error::EKS cluster '${{ steps.eks-cluster.outputs.name }}' was not found in region '$AWS_REGION'"
+            exit 1
+          fi
+          if [ "$STATUS" != "ACTIVE" ]; then
+            echo "::error::EKS cluster '${{ steps.eks-cluster.outputs.name }}' is in status '$STATUS' (expected ACTIVE)"
+            exit 1
+          fi
           aws eks update-kubeconfig --name "${{ steps.eks-cluster.outputs.name }}" --region "$AWS_REGION"
 
       - name: Deploy to release namespace (port 8003)
@@ -270,6 +291,15 @@ jobs:
 
       - name: Update kubeconfig
         run: |
+          STATUS=$(aws eks describe-cluster --name "${{ inputs.eks_cluster_name }}" --region "$AWS_REGION" --query 'cluster.status' --output text 2>/dev/null || true)
+          if [ -z "$STATUS" ]; then
+            echo "::error::EKS cluster '${{ inputs.eks_cluster_name }}' was not found in region '$AWS_REGION'"
+            exit 1
+          fi
+          if [ "$STATUS" != "ACTIVE" ]; then
+            echo "::error::EKS cluster '${{ inputs.eks_cluster_name }}' is in status '$STATUS' (expected ACTIVE)"
+            exit 1
+          fi
           aws eks update-kubeconfig --name "${{ inputs.eks_cluster_name }}" --region "$AWS_REGION"
 
       - name: Rollback selected environment

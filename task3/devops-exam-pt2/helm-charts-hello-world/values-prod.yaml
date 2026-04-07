@@ -1,11 +1,11 @@
 replicaCount: 2
 
 image:
-  tag: "<release_image_tag>"
+  tag: "latest"
   pullPolicy: Always
 
 service:
-  port: "<release_port>"
+  port: 8003
 
 django:
   debug: "False"

@@ -1,10 +1,10 @@
 replicaCount: 1
 
 image:
-  tag: "<dev_image_tag>"
+  tag: "develop"
 
 service:
-  port: "<dev_port>"
+  port: 8002
 
 appConfig:
   debug: "True"
