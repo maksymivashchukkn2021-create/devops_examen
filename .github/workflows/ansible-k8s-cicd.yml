@@ -61,6 +61,23 @@ jobs:
             ssh-keyscan -H "$host" >> ~/.ssh/known_hosts 2>/dev/null || true
           done
 
+      - name: Wait for SSH readiness
+        run: |
+          awk 'NF && $1 !~ /^\[/' task2/ansible/inventory/hosts.ini | while read -r host _; do
+            echo "Checking SSH readiness for $host..."
+            for i in $(seq 1 8); do
+              if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no -i "$RUNNER_TEMP/ansible_key" ubuntu@"$host" "echo ok" >/dev/null 2>&1; then
+                echo "SSH is ready for $host"
+                break
+              fi
+              if [ "$i" -eq 8 ]; then
+                echo "::error::SSH is not ready for $host after retries"
+                exit 1
+              fi
+              sleep 5
+            done
+          done
+
       - name: Ansible syntax check
         working-directory: task2/ansible
         env:
@@ -72,6 +89,7 @@ jobs:
         working-directory: task2/ansible
         env:
           ANSIBLE_CONFIG: ${{ github.workspace }}/task2/ansible/ansible.cfg
+          ANSIBLE_TIMEOUT: "60"
         run: |
           MINIKUBE_PROFILE_VAL="minikube"
           PROXY_BIND_VAL="0.0.0.0"
@@ -131,10 +149,28 @@ jobs:
             ssh-keyscan -H "$host" >> ~/.ssh/known_hosts 2>/dev/null || true
           done
 
+      - name: Wait for SSH readiness
+        run: |
+          awk 'NF && $1 !~ /^\[/' task2/ansible/inventory/hosts.ini | while read -r host _; do
+            echo "Checking SSH readiness for $host..."
+            for i in $(seq 1 8); do
+              if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no -i "$RUNNER_TEMP/ansible_key" ubuntu@"$host" "echo ok" >/dev/null 2>&1; then
+                echo "SSH is ready for $host"
+                break
+              fi
+              if [ "$i" -eq 8 ]; then
+                echo "::error::SSH is not ready for $host after retries"
+                exit 1
+              fi
+              sleep 5
+            done
+          done
+
       - name: Install Kubernetes stack
         working-directory: task2/ansible
         env:
           ANSIBLE_CONFIG: ${{ github.workspace }}/task2/ansible/ansible.cfg
+          ANSIBLE_TIMEOUT: "60"
         run: |
           MINIKUBE_PROFILE_VAL="minikube"
           PROXY_BIND_VAL="0.0.0.0"
