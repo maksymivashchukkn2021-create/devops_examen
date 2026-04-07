@@ -10,6 +10,8 @@
     helm_version: "v3.16.2"
     minikube_profile: "minikube"
     minikube_run_user: "ubuntu"
+    minikube_driver: "none"
+    minikube_container_runtime: "containerd"
     proxy_bind_address: "0.0.0.0"
     proxy_port: 8001
     docker_arch_map:
@@ -43,12 +45,14 @@
         url: https://download.docker.com/linux/ubuntu/gpg
         dest: /etc/apt/keyrings/docker.asc
         mode: "0644"
+      when: minikube_driver == "docker"
 
     - name: configure Docker apt repository
       ansible.builtin.apt_repository:
         repo: "deb [arch={{ docker_arch_map.get(ansible_architecture, 'amd64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
         filename: docker
         state: present
+      when: minikube_driver == "docker"
 
     - name: install Docker engine packages from Docker repo
       block:
@@ -70,6 +74,23 @@
               ansible.builtin.shell: "curl -fsSL https://get.docker.com | sh"
               args:
                 creates: /usr/bin/docker
+      when: minikube_driver == "docker"
+
+    - name: install containerd for none driver
+      ansible.builtin.apt:
+        name: [containerd]
+        state: present
+        update_cache: true
+      when: minikube_driver == "none"
+
+    - name: ensure containerd is enabled and running
+      ansible.builtin.systemd:
+        name: containerd
+        enabled: true
+        state: started
+      when:
+        - minikube_driver == "none"
+        - not ansible_check_mode
 
     - name: install kubectl binary
       ansible.builtin.get_url:
@@ -106,19 +127,31 @@
       ansible.builtin.group:
         name: docker
         state: present
-      when: not ansible_check_mode
+      when:
+        - minikube_driver == "docker"
+        - not ansible_check_mode
 
     - name: ensure user exists in docker group
       ansible.builtin.user:
         name: "{{ minikube_run_user }}"
         groups: docker
         append: true
-      when: not ansible_check_mode
+      when:
+        - minikube_driver == "docker"
+        - not ansible_check_mode
 
-    - name: start minikube
+    - name: start minikube with docker driver
       ansible.builtin.shell: "sg docker -c 'minikube status -p {{ minikube_profile }} || minikube start -p {{ minikube_profile }} --driver=docker --force'"
       become_user: "{{ minikube_run_user }}"
-      when: not ansible_check_mode
+      when:
+        - minikube_driver == "docker"
+        - not ansible_check_mode
+
+    - name: start minikube with none driver
+      ansible.builtin.shell: "minikube status -p {{ minikube_profile }} || minikube start -p {{ minikube_profile }} --driver=none --container-runtime={{ minikube_container_runtime }} --force"
+      when:
+        - minikube_driver == "none"
+        - not ansible_check_mode
 
     - name: install minikube proxy systemd unit
       ansible.builtin.copy:
@@ -127,11 +160,11 @@
         content: |
           [Unit]
           Description=Minikube kubectl proxy (Ivashchuk)
-          After=network.target docker.service
+          After=network.target{% if minikube_driver == 'docker' %} docker.service{% endif %}
 
           [Service]
           Type=simple
-          User={{ minikube_run_user }}
+          User={{ 'root' if minikube_driver == 'none' else minikube_run_user }}
           ExecStart=/usr/local/bin/minikube -p {{ minikube_profile }} kubectl -- proxy --address={{ proxy_bind_address }} --accept-hosts=.* --port={{ proxy_port }}
           Restart=always
 
