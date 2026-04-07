@@ -116,7 +116,7 @@
       when: not ansible_check_mode
 
     - name: start minikube
-      ansible.builtin.shell: "sg docker -c 'minikube status -p {{ minikube_profile }} || minikube start -p {{ minikube_profile }} --driver=docker'"
+      ansible.builtin.shell: "sg docker -c 'minikube status -p {{ minikube_profile }} || minikube start -p {{ minikube_profile }} --driver=docker --force'"
       become_user: "{{ minikube_run_user }}"
       when: not ansible_check_mode
 
