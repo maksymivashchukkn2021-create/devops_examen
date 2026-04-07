@@ -102,6 +102,11 @@
             mode: "0755"
             remote_src: true
 
+    - name: ensure docker group exists
+      ansible.builtin.group:
+        name: docker
+        state: present
+
     - name: ensure user exists in docker group
       ansible.builtin.user:
         name: "{{ minikube_run_user }}"
